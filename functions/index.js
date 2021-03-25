@@ -1,3 +1,19 @@
+/**
+ * Copyright 2020 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 'use strict';
 
 const functions = require('firebase-functions');
@@ -10,6 +26,37 @@ const logging = new Logging({
 const stripe = require('stripe')(functions.config().stripe.secret, {
   apiVersion: '2020-03-02',
 });
+
+/**When user is created create a firebase user with address field
+ * 
+ */
+ exports.addUserToFireStore = functions.auth.user().onCreate((user) => {
+  functions.logger.info("New user created!");
+  const usersRef = admin.firestore().collection("users");
+  return usersRef.doc(user.uid).set({
+    name: user.displayName,
+    address: "", // emptyAddress
+  });
+});
+
+/**When order is placed find out how many specials contains 
+ * and add it to collection bookedSpecials
+ * as a date and amount how many
+ */
+exports.bookSpecial = functions.firestore.document('placedOrders/{documentId}')
+.onCreate((snap, context) => {
+functions.logger.info("New order placed!");
+const placedOrder = snap.data()
+const placedOrderSpecialCount = snap.data().specialCount
+const specialBookingRef = admin.firestore().collection("specialsBooking")
+if(placedOrderSpecialCount>0){
+  return specialBookingRef.doc().set({
+    date: placedOrder.orderToBeReadyDate,
+    amount: placedOrderSpecialCount,
+  });
+}else return 
+});
+
 
 /**
  * When a user is created, create a Stripe customer object for them.
